@@ -33,6 +33,8 @@ data = np.random.lognormal(mean=np.log(12), sigma=0.2, size=1_000_000)
 time = f"{round(np.quantile(data, 0.5), 3)} mins"
 risk = "50.000%"
 
+# TODO: randomize condition and have it change on a button click so that we don't manually have to rerun the script each time
+
 condition = "red-green"
 
 if condition == "quantile":
