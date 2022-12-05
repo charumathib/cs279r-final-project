@@ -23,20 +23,21 @@ from coloraide import Color
 from matplotlib.colors import LinearSegmentedColormap
 
 
-plt.rcParams.update({'font.size': 15})
+# plt.rcParams.update({'font.size': 28})
 
 # Define initial parameters
 
 # Create the figure and the line that we will manipulate
-fig, ax = plt.subplots(figsize=(18, 11))
+fig, ax = plt.subplots()
 data = np.random.lognormal(mean=np.log(12), sigma=0.2, size=1_000_000)
 time = f"{round(np.quantile(data, 0.5), 3)} mins"
 risk = "50.000%"
 
-condition = "quantile"
+condition = "red-green"
 
 if condition == "quantile":
-    # quantile dotplot
+    # TODO: figure out resizing
+    # quantile dotplot 
     ax = ntile_dotplot(data, dots=20, edgecolor="k", linewidth=2, ax=ax)
 elif condition == "PDF":
     # PDF
