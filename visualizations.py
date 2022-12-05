@@ -48,10 +48,10 @@ elif condition == "PDF":
 elif condition == "red-green":
     # red-green color slider
     cMap = []
-    xRange = list(np.linspace(0, 20, 100))
+    xRange = list(np.linspace(0, 18, 100))
     colTuples = [(stats.percentileofscore(data, x)/100, 1 - stats.percentileofscore(data, x)/100, 0) for x in xRange]
     for value, colour in zip(xRange, colTuples):
-        cMap.append((value/20, colour))
+        cMap.append((value/18, colour))
 
     customColourMap = LinearSegmentedColormap.from_list("custom", cMap)
     print(customColourMap)
