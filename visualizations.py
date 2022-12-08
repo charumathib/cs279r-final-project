@@ -18,56 +18,73 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
 from quantile_dotplot import ntile_dotplot
 from scipy import stats
-from scipy.stats import lognorm
-from coloraide import Color
 from matplotlib.colors import LinearSegmentedColormap
 
 
-# plt.rcParams.update({'font.size': 28})
+# globals
+N_PLOTS = 3
+N_MINUTES = 30
 
-# Define initial parameters
+fig, axs = plt.subplots(N_PLOTS, 1, figsize=(12, 7))
+data = [
+    np.random.lognormal(mean=np.log(12), sigma=0.2, size=1_000_000),
+    np.random.normal(loc=14, scale=0.5, size=1_000_000),
+    np.random.normal(loc=16, scale=1.5, size=1_000_000)
+    ]
+xs = np.linspace(0, N_MINUTES, 100)
 
-# Create the figure and the line that we will manipulate
-fig, ax = plt.subplots()
-data = np.random.lognormal(mean=np.log(12), sigma=0.2, size=1_000_000)
-time = f"{round(np.quantile(data, 0.5), 3)} mins"
-risk = "50.000%"
+# 0.5 quantile 
+times = [round(np.quantile(d, 0.5), 1) for d in data]
+risks = [50.0, 50.0, 50.0]
 
 # TODO: randomize condition and have it change on a button click so that we don't manually have to rerun the script each time
 
-condition = "red-green"
+condition = "quantile"
 
 if condition == "quantile":
     # TODO: figure out resizing
-    # quantile dotplot 
-    ax = ntile_dotplot(data, dots=20, edgecolor="k", linewidth=2, ax=ax)
+    plt.rcParams.update({'font.size': 15})
+    for i in range(N_PLOTS):
+        axs[i] = ntile_dotplot(data[i], dots=20, linewidth=0, ax=axs[i])
+
 elif condition == "PDF":
-    # PDF
-    frozen_lognorm = stats.lognorm([0.2], scale=12)
-    x=np.linspace(8,18,200)
-    print(x)
-    ax.plot(x, frozen_lognorm.pdf(x))
-elif condition == "red-green":
-    # red-green color slider
-    cMap = []
-    xRange = list(np.linspace(0, 18, 100))
-    colTuples = [(stats.percentileofscore(data, x)/100, 1 - stats.percentileofscore(data, x)/100, 0) for x in xRange]
-    for value, colour in zip(xRange, colTuples):
-        cMap.append((value/18, colour))
+    # PDFs specified in the form stats.lognorm([variance], mean) for lognormal and stats.norm([mean], variance) for normal
+    dists = [stats.lognorm([0.2], scale=12), stats.norm([14], scale=0.5), stats.norm([16], scale=1.5)]
+    colors = ["blue", "pink", "green"]
+    # lines corresponding to time
+    for i in range(N_PLOTS):
+        ax = axs[i]
+        ax.plot(xs, dists[i].pdf(xs), color = colors[i])
+elif condition == "green-red":
+    for i in range(N_PLOTS):
+        cMap = []
+        ax = axs[i]
+        colTuples = [(stats.percentileofscore(data[i], x)/100, 1 - stats.percentileofscore(data[i], x)/100, 0) for x in xs]
+        for value, colour in zip(xs, colTuples):
+            cMap.append((value/N_MINUTES, colour))
+        customColorMap = LinearSegmentedColormap.from_list("custom", cMap)
+        ax.imshow(
+            np.tile(np.linspace(0, 1, N_MINUTES + 1), (3, 1)),
+            cmap = customColorMap,
+            interpolation = 'bicubic',
+        )
 
-    customColourMap = LinearSegmentedColormap.from_list("custom", cMap)
-    print(customColourMap)
-    ax.imshow(np.vstack((np.linspace(0, 1, 18), np.linspace(0, 1, 18), np.linspace(0, 1, 18))),
-    cmap = customColourMap,
-    interpolation = 'bicubic',
-    )
-    ax.set_xlim(left=8, right=17.5)
+timeTextElems = []
+riskTextElems = []
+lines = []
+for i in range(N_PLOTS):
+    ax = axs[i]
+    ax.set_xticks(np.linspace(0, N_MINUTES, 16))
+    ax.set_xlim(left=0, right=N_MINUTES)
     ax.get_yaxis().set_visible(False)
+    lines.append(ax.axvline(x = times[i], color = "black"))
+    timeTextElems.append(ax.text(0.5, 1.5, f"{times[i]} mins", horizontalalignment='center', verticalalignment='center', transform=ax.transAxes))
+    riskTextElems.append(ax.text(0.5, 1.2, f"{risks[i]}% risk", horizontalalignment='center', verticalalignment='center', transform=ax.transAxes))
 
-line = ax.axvline(x = 10, color = 'b', label = 'axvline - full height')
-
-# adjust the main plot to make room for the sliders
+# adjust the main plot to make room for the sliders and text
 fig.subplots_adjust(bottom=0.25)
+fig.subplots_adjust(top=0.85)
+fig.subplots_adjust(hspace=1)
 
 # Make a horizontal slider to control the frequency.
 axrisk = fig.add_axes([0.25, 0.1, 0.65, 0.03])
@@ -83,45 +100,36 @@ axtime = fig.add_axes([0.25, 0.05, 0.65, 0.03])
 time_slider = Slider(
     ax=axtime,
     label='Time slider (min)',
-    valmin=7,
-    valmax=18,
-    valinit=np.quantile(data, 0.5),
+    valmin=0,
+    valmax=N_MINUTES,
+    valinit=N_MINUTES//2,
 )
-
-textTime = ax.text(0.5, 1.1, time, horizontalalignment='center',
-     verticalalignment='center', transform=ax.transAxes)
-textRisk = ax.text(0.5, 1.03, risk, horizontalalignment='center',
-     verticalalignment='center', transform=ax.transAxes)
 
 # we want to update our dotplot to have a line
 def updateFreq(val):
-    quantile = np.quantile(data, val/100)
-    textTime.set_text(f"{round(quantile, 3)} mins")
-    textRisk.set_text(f"{round(val, 3)}%")
-    time_slider.reset()
-    line.set_xdata(quantile)
+    times = [round(np.quantile(d, val/100), 1) for d in data]
+    risks = [round(val, 1)] * 3
+    for i in range(N_PLOTS):
+        timeTextElems[i].set_text(f"{times[i]} mins")
+        riskTextElems[i].set_text(f"{risks[i]}% risk")
+        lines[i].set_xdata(times[i])
+        
     fig.canvas.draw_idle()
+    time_slider.reset()
 
 def updateTime(val):
-    freq_slider.reset()
-    textTime.set_text(f"{round(val, 3)} mins")
-    textRisk.set_text(f"{round(stats.percentileofscore(data, val), 3)}%")
-    line.set_xdata(val)
+    times = [round(val, 1)] * 3
+    risks = [round(stats.percentileofscore(d, val), 1) for d in data]
+    for i in range(N_PLOTS):
+        timeTextElems[i].set_text(f"{times[i]} mins")
+        riskTextElems[i].set_text(f"{risks[i]}% risk")
+        lines[i].set_xdata(val)
+
     fig.canvas.draw_idle()
+    freq_slider.reset()
 
 # register the update function with each slider
 freq_slider.on_changed(updateFreq)
 time_slider.on_changed(updateTime)
 
-# Create a `matplotlib.widgets.Button` to reset the sliders to initial values.
 plt.show()
-
-#############################################################################
-#
-# .. admonition:: References
-#
-#    The use of the following functions, methods, classes and modules is shown
-#    in this example:
-#
-#    - `matplotlib.widgets.Button`
-#    - `matplotlib.widgets.Slider`
