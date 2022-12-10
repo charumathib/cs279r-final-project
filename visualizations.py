@@ -5,6 +5,7 @@ from matplotlib.widgets import Slider, Button
 from quantile_dotplot import ntile_dotplot
 from scipy import stats
 from matplotlib.colors import LinearSegmentedColormap
+import matplotlib.patches as patches
 
 
 # globals
@@ -21,29 +22,25 @@ xs = np.linspace(0, N_MINUTES, 200)
 # 0.5 quantile 
 times = [round(np.quantile(d, 0.5), 1) for d in data]
 risks = [50.0, 50.0, 50.0]
+colors = ["blue", "pink", "green"]
 fig, axs = None, None
 
-# TODO: randomize condition and have it change on a button click so that we don't manually have to rerun the script each time
-conditions = []
-condition = "green-red"
-
 def quantilePlot():
-    # plt.rcParams.update({'font.size': 25})
+    plt.rcParams.update({'font.size': 25})
     for i in range(N_PLOTS):
-        axs[i] = ntile_dotplot(data[i], dots=20, linewidth=0, ax=axs[i])
+        axs[i] = ntile_dotplot(data[i], dots=20, facecolor=colors[i], linewidth=0, ax=axs[i])
 
 def pdfPlot():
-    # plt.rcParams.update({'font.size': 10})
+    plt.rcParams.update({'font.size': 10})
     # PDFs specified in the form stats.lognorm([variance], mean) for lognormal and stats.norm([mean], variance) for normal
     dists = [stats.lognorm([0.2], scale=12), stats.norm([14], scale=0.5), stats.norm([16], scale=1.5)]
-    colors = ["blue", "pink", "green"]
     # lines corresponding to time
     for i in range(N_PLOTS):
         ax = axs[i]
         ax.plot(xs, dists[i].pdf(xs), color = colors[i])
 
 def greenRedPlot():
-    # plt.rcParams.update({'font.size': 10})
+    plt.rcParams.update({'font.size': 10})
     for i in range(N_PLOTS):
         cMap = []
         ax = axs[i]
@@ -72,7 +69,19 @@ def transformAxs(axs):
         timeTextElems.append(ax.text(0.5, 1.5, f"{times[i]} mins", horizontalalignment='center', verticalalignment='center', transform=ax.transAxes))
         riskTextElems.append(ax.text(0.5, 1.2, f"{risks[i]}% risk", horizontalalignment='center', verticalalignment='center', transform=ax.transAxes))
 
-plots = [quantilePlot, pdfPlot, greenRedPlot]
+        bottom, top = ax.get_ylim()
+        mid = (bottom + top)/2
+        if i == 0:
+            ax.text(-3, mid, ' QYE ', color='blue', 
+                bbox=dict(facecolor='none', edgecolor='blue', boxstyle='round,pad=1', linewidth=2))
+        elif i == 1:
+            ax.text(-3, mid, '  AL  ', color='pink', 
+                bbox=dict(facecolor='none', edgecolor='pink', boxstyle='round,pad=1', linewidth=2))
+        else:
+            ax.text(-3, mid, '  CC  ', color='green', 
+                bbox=dict(facecolor='none', edgecolor='green', boxstyle='round,pad=1', linewidth=2))
+
+plots = [pdfPlot, quantilePlot, greenRedPlot]
 random.shuffle(plots)
 for plot in plots:
     fig, axs = plt.subplots(N_PLOTS, 1, figsize=(12, 7))
@@ -110,6 +119,9 @@ for plot in plots:
             riskTextElems[i].set_text(f"{risks[i]}% risk")
             lines[i].set_xdata(times[i])
         
+        freq_slider.poly.set_fc('#2074b4')
+        time_slider.poly.set_fc('grey')
+
         fig.canvas.draw_idle()
         time_slider.reset()  
 
@@ -120,6 +132,9 @@ for plot in plots:
             timeTextElems[i].set_text(f"{times[i]} mins")
             riskTextElems[i].set_text(f"{risks[i]}% risk")
             lines[i].set_xdata(val)
+
+        time_slider.poly.set_fc('#2074b4')
+        freq_slider.poly.set_fc('grey')
 
         fig.canvas.draw_idle()
         freq_slider.reset()
