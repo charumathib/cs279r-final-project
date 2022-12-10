@@ -21,21 +21,19 @@ xs = np.linspace(0, N_MINUTES, 200)
 # 0.5 quantile 
 times = [round(np.quantile(d, 0.5), 1) for d in data]
 risks = [50.0, 50.0, 50.0]
+fig, axs = None, None
 
 # TODO: randomize condition and have it change on a button click so that we don't manually have to rerun the script each time
 conditions = []
 condition = "green-red"
 
 def quantilePlot():
-    fig, axs = plt.subplots(N_PLOTS, 1, figsize=(12, 7))
-    plt.rcParams.update({'font.size': 25})
+    # plt.rcParams.update({'font.size': 25})
     for i in range(N_PLOTS):
         axs[i] = ntile_dotplot(data[i], dots=20, linewidth=0, ax=axs[i])
-    return fig, axs
 
 def pdfPlot():
-    fig, axs = plt.subplots(N_PLOTS, 1, figsize=(12, 7))
-    plt.rcParams.update({'font.size': 10})
+    # plt.rcParams.update({'font.size': 10})
     # PDFs specified in the form stats.lognorm([variance], mean) for lognormal and stats.norm([mean], variance) for normal
     dists = [stats.lognorm([0.2], scale=12), stats.norm([14], scale=0.5), stats.norm([16], scale=1.5)]
     colors = ["blue", "pink", "green"]
@@ -43,11 +41,9 @@ def pdfPlot():
     for i in range(N_PLOTS):
         ax = axs[i]
         ax.plot(xs, dists[i].pdf(xs), color = colors[i])
-    return fig, axs
 
 def greenRedPlot():
-    fig, axs = plt.subplots(N_PLOTS, 1, figsize=(12, 7))
-    plt.rcParams.update({'font.size': 10})
+    # plt.rcParams.update({'font.size': 10})
     for i in range(N_PLOTS):
         cMap = []
         ax = axs[i]
@@ -60,12 +56,13 @@ def greenRedPlot():
             cmap = customColorMap,
             interpolation = 'bicubic',
         )
-    return fig, axs
 
-def addAdditionalElems(fig, axs):
-    timeTextElems = []
-    riskTextElems = []
-    lines = []
+# shuffled list of all the plot types
+timeTextElems = []
+riskTextElems = []
+lines = []
+
+def transformAxs(axs):
     for i in range(N_PLOTS):
         ax = axs[i]
         ax.set_xticks(np.linspace(0, N_MINUTES, 16))
@@ -75,12 +72,18 @@ def addAdditionalElems(fig, axs):
         timeTextElems.append(ax.text(0.5, 1.5, f"{times[i]} mins", horizontalalignment='center', verticalalignment='center', transform=ax.transAxes))
         riskTextElems.append(ax.text(0.5, 1.2, f"{risks[i]}% risk", horizontalalignment='center', verticalalignment='center', transform=ax.transAxes))
 
-    # adjust the main plot to make room for the sliders and text
+plots = [quantilePlot, pdfPlot, greenRedPlot]
+random.shuffle(plots)
+for plot in plots:
+    fig, axs = plt.subplots(N_PLOTS, 1, figsize=(12, 7))
+    plot()
+    transformAxs(axs)
+
+    # add the sliders
     fig.subplots_adjust(bottom=0.25)
     fig.subplots_adjust(top=0.85)
     fig.subplots_adjust(hspace=1)
 
-    # Make a horizontal slider to control the frequency.
     axrisk = fig.add_axes([0.25, 0.1, 0.65, 0.03])
     freq_slider = Slider(
         ax=axrisk,
@@ -99,7 +102,6 @@ def addAdditionalElems(fig, axs):
         valinit=N_MINUTES//2,
     )
 
-    # we want to update our dotplot to have a line
     def updateFreq(val):
         times = [round(np.quantile(d, val/100), 1) for d in data]
         risks = [round(val, 1)] * 3
@@ -126,15 +128,8 @@ def addAdditionalElems(fig, axs):
     freq_slider.on_changed(updateFreq)
     time_slider.on_changed(updateTime)
 
-fig, axs = quantilePlot()
-addAdditionalElems(fig, axs)
-manager = plt.get_current_fig_manager()
-manager.full_screen_toggle()
-plt.show()
+    manager = plt.get_current_fig_manager()
+    manager.full_screen_toggle()
+    plt.show()
 
-plt.rcParams.update({'font.size': 10})
-fig, axs = pdfPlot()
-addAdditionalElems(fig, axs)
-manager = plt.get_current_fig_manager()
-manager.full_screen_toggle()
-plt.show()
+
