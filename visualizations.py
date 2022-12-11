@@ -13,7 +13,7 @@ N_MINUTES = 20
 
 data = [
     np.random.gamma(1.5, 2.0, size=1_000_000),
-    np.random.gamma(7.0, 1.0, size=1_000_000),
+    np.random.gamma(20.0, 0.25, size=1_000_000),
     np.random.gamma(25.0, 0.5, size=1_000_000),
     ]
 xs = np.linspace(0, N_MINUTES, 200)
@@ -32,7 +32,7 @@ def quantilePlot():
 def pdfPlot():
     plt.rcParams.update({'font.size': 12})
     # PDFs specified in the form stats.lognorm([variance], mean) for lognormal and stats.norm([mean], variance) for normal
-    dists = [stats.gamma(1.5, scale = 2.0), stats.gamma(7.0, scale = 1.0), stats.gamma(25.0,  scale = 0.5)]
+    dists = [stats.gamma(1.5, scale = 2.0), stats.gamma(20.0, scale = 0.25), stats.gamma(25.0,  scale = 0.5)]
     # lines corresponding to time
     for i in range(N_PLOTS):
         ax = axs[i]
@@ -55,7 +55,7 @@ def transformAxs(axs):
         ax.spines['right'].set_visible(False)
         ax.spines['left'].set_visible(False)
         ax.set_xlim(left=0, right=N_MINUTES)
-        ax.set_xticks(np.linspace(0, N_MINUTES, 11))
+        ax.set_xticks(np.linspace(0, N_MINUTES, 11), labelsize=12)
         ax.get_yaxis().set_visible(False)
         lines.append(ax.axvline(x = times[i], color = "black"))
         timeTextElems.append(ax.text(0.5, 1.5, f"{times[i]} mins", horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, weight="bold"))
