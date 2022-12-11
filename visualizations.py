@@ -10,6 +10,9 @@ from scipy import stats
 N_PLOTS = 3
 N_MINUTES = 20
 
+# add number of times each slider was touched
+# count drag and release as one time
+
 
 data = [
     np.random.gamma(1.5, 2.0, size=1_000_000),
@@ -24,13 +27,10 @@ risks = [50.0, 50.0, 50.0]
 colors = ["blue", "pink", "green"]
 fig, axs = None, None
 
-def quantilePlot():
+def pdfPlot(slider):
     plt.rcParams.update({'font.size': 12})
-    for i in range(N_PLOTS):
-        axs[i] = ntile_dotplot(data[i], dots=20, facecolor=colors[i], linewidth=0, ax=axs[i])
-
-def pdfPlot():
-    plt.rcParams.update({'font.size': 12})
+    fig.text(0.57, 0.95, f"Visualization ({1 + slider * 3})", color='gray', 
+                bbox=dict(facecolor='none', edgecolor='none'))
     # PDFs specified in the form stats.lognorm([variance], mean) for lognormal and stats.norm([mean], variance) for normal
     dists = [stats.gamma(1.5, scale = 2.0), stats.gamma(20.0, scale = 0.25), stats.gamma(25.0,  scale = 0.5)]
     # lines corresponding to time
@@ -38,8 +38,17 @@ def pdfPlot():
         ax = axs[i]
         ax.plot(xs, dists[i].pdf(xs), color = colors[i])
 
-def greenRedPlot():
+def quantilePlot(slider):
     plt.rcParams.update({'font.size': 12})
+    fig.text(0.57, 0.95, f"Visualization ({2 + slider * 3})", color='gray', 
+                bbox=dict(facecolor='none', edgecolor='none'))
+    for i in range(N_PLOTS):
+        axs[i] = ntile_dotplot(data[i], dots=20, facecolor=colors[i], linewidth=0, ax=axs[i])
+
+def greenRedPlot(slider):
+    plt.rcParams.update({'font.size': 12})
+    fig.text(0.57, 0.95, f"Visualization ({3 + slider * 3})", color='gray', 
+                bbox=dict(facecolor='none', edgecolor='none'))
     for i in range(N_PLOTS):
         ax = axs[i]
         for x in xs:
@@ -76,79 +85,77 @@ def transformAxs(axs, slider):
     return timeTextElems, riskTextElems, lines
 
 # tuples of the form (whether the plot has slider, plotFunction)
-plots = [
-    (True, quantilePlot),
-    (True, pdfPlot),
-    (True, greenRedPlot),
-    (False, quantilePlot),
-    (False, pdfPlot),
-    (False, greenRedPlot)
-]
+plots = [quantilePlot, pdfPlot, greenRedPlot]
+scenarios = ["Scenario (a)", "Scenario (b)", "Scenario (c)"]
 
 random.shuffle(plots)
-for slider, plot in plots:
-    fig, axs = plt.subplots(N_PLOTS, 1, figsize=(3.5, 6))
-    plot()
-    timeTextElems, riskTextElems, lines = transformAxs(axs, slider)
-    
-    fig.subplots_adjust(bottom=0.25)
-    fig.subplots_adjust(top=0.85)
-    fig.subplots_adjust(hspace=1)
+random.shuffle(scenarios)
+for slider in [False, True]:
+    for i, plot in enumerate(plots):
+        fig, axs = plt.subplots(N_PLOTS, 1, figsize=(3.5, 6))
+        plot(slider)
+        timeTextElems, riskTextElems, lines = transformAxs(axs, slider)
+        
+        fig.subplots_adjust(bottom=0.25)
+        fig.subplots_adjust(top=0.85)
+        fig.subplots_adjust(hspace=1)
 
-    # add the sliders
-    if slider:
-        axrisk = fig.add_axes([0.35, 0.1, 0.5, 0.03])
-        freq_slider = Slider(
-            ax=axrisk,
-            label='Risk slider (%)',
-            valmin=0,
-            valmax=100,
-            valinit=50,
-        )
+        fig.text(0.05, 0.95, scenarios[i], color='gray', 
+                bbox=dict(facecolor='none', edgecolor='none'))
+        # add the sliders
+        if slider:
+            axrisk = fig.add_axes([0.35, 0.1, 0.5, 0.03])
+            freq_slider = Slider(
+                ax=axrisk,
+                label='Risk slider (%)',
+                valmin=0,
+                valmax=100,
+                valinit=50,
+            )
 
-        axtime = fig.add_axes([0.35, 0.05, 0.5, 0.03])
-        time_slider = Slider(
-            ax=axtime,
-            label='Time slider (min)',
-            valmin=0,
-            valmax=N_MINUTES,
-            valinit=N_MINUTES//2,
-        )
+            axtime = fig.add_axes([0.35, 0.05, 0.5, 0.03])
+            time_slider = Slider(
+                ax=axtime,
+                label='Time slider (min)',
+                valmin=0,
+                valmax=N_MINUTES,
+                valinit=N_MINUTES//2,
+            )
 
-        freq_slider.label.set_size(9)
-        time_slider.label.set_size(9)
+            freq_slider.label.set_size(9)
+            time_slider.label.set_size(9)
 
-        def updateFreq(val):
-            times = [round(np.quantile(d, val/100), 1) for d in data]
-            risks = [round(val, 1)] * 3
-            for i in range(N_PLOTS):
-                timeTextElems[i].set_text(f"{times[i]} mins")
-                riskTextElems[i].set_text(f"{risks[i]}% risk")
-                lines[i].set_xdata(min(times[i], N_MINUTES))
-            
-            freq_slider.poly.set_fc('#2074b4')
-            time_slider.poly.set_fc('grey')
-            
-            fig.canvas.draw_idle()
-            time_slider.reset()  
+            def updateFreq(val):
+                times = [round(np.quantile(d, val/100), 1) for d in data]
+                risks = [round(val, 1)] * 3
+                for i in range(N_PLOTS):
+                    timeTextElems[i].set_text(f"{times[i]} mins")
+                    riskTextElems[i].set_text(f"{risks[i]}% risk")
+                    lines[i].set_xdata(min(times[i], N_MINUTES))
+                
+                freq_slider.poly.set_fc('#2074b4')
+                time_slider.poly.set_fc('grey')
+                
+                fig.canvas.draw_idle()
+                time_slider.reset()  
 
-        def updateTime(val):
-            times = [round(val, 1)] * 3
-            risks = [round(stats.percentileofscore(d, val), 1) for d in data]
-            for i in range(N_PLOTS):
-                timeTextElems[i].set_text(f"{times[i]} mins")
-                riskTextElems[i].set_text(f"{risks[i]}% risk")
-                lines[i].set_xdata(val)
+            def updateTime(val):
+                times = [round(val, 1)] * 3
+                risks = [round(stats.percentileofscore(d, val), 1) for d in data]
+                for i in range(N_PLOTS):
+                    timeTextElems[i].set_text(f"{times[i]} mins")
+                    riskTextElems[i].set_text(f"{risks[i]}% risk")
+                    lines[i].set_xdata(val)
 
-            time_slider.poly.set_fc('#2074b4')
-            freq_slider.poly.set_fc('grey')
+                time_slider.poly.set_fc('#2074b4')
+                freq_slider.poly.set_fc('grey')
 
-            fig.canvas.draw_idle()
-            freq_slider.reset()
+                fig.canvas.draw_idle()
+                freq_slider.reset()
 
-        # register the update function with each slider
-        freq_slider.on_changed(updateFreq)
-        time_slider.on_changed(updateTime)
-    plt.show()
+            # register the update function with each slider
+            freq_slider.on_changed(updateFreq)
+            time_slider.on_changed(updateTime)
+        plt.show()
 
 
