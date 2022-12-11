@@ -8,7 +8,7 @@ from scipy import stats
 
 # globals
 N_PLOTS = 3
-N_MINUTES = 18
+N_MINUTES = 20
 
 
 data = [
@@ -55,7 +55,7 @@ def transformAxs(axs):
         ax.spines['right'].set_visible(False)
         ax.spines['left'].set_visible(False)
         ax.set_xlim(left=0, right=N_MINUTES)
-        ax.set_xticks(np.linspace(0, N_MINUTES, 10))
+        ax.set_xticks(np.linspace(0, N_MINUTES, 11))
         ax.get_yaxis().set_visible(False)
         lines.append(ax.axvline(x = times[i], color = "black"))
         timeTextElems.append(ax.text(0.5, 1.5, f"{times[i]} mins", horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, weight="bold"))
@@ -75,8 +75,7 @@ def transformAxs(axs):
     return timeTextElems, riskTextElems, lines
 
 plots = [quantilePlot, pdfPlot, greenRedPlot]
-# plots = [quantilePlot]
-# random.shuffle(plots)
+random.shuffle(plots)
 for plot in plots:
     fig, axs = plt.subplots(N_PLOTS, 1, figsize=(3.5, 6))
     plot()
@@ -114,7 +113,7 @@ for plot in plots:
         for i in range(N_PLOTS):
             timeTextElems[i].set_text(f"{times[i]} mins")
             riskTextElems[i].set_text(f"{risks[i]}% risk")
-            lines[i].set_xdata(times[i])
+            lines[i].set_xdata(min(times[i], N_MINUTES))
         
         freq_slider.poly.set_fc('#2074b4')
         time_slider.poly.set_fc('grey')
